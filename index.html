@@ -64,8 +64,9 @@
     let unsubscribe = null;
 
     // Initialize Firebase and load posts
-    async function initializeApp() {
+    async function initializeBlogApp() {
       try {
+        console.log("Initializing app...");
         // Load posts from Firestore
         await loadPosts();
         
@@ -74,6 +75,7 @@
         
         // Render posts
         renderPosts();
+        console.log("App initialized successfully");
       } catch (error) {
         console.error("Error initializing app:", error);
       }
@@ -82,6 +84,7 @@
     // Load posts from Firestore
     async function loadPosts() {
       try {
+        console.log("Loading posts from Firestore...");
         const q = query(collection(db, "posts"), orderBy("date", "desc"));
         const querySnapshot = await getDocs(q);
         posts = [];
@@ -91,6 +94,7 @@
             ...doc.data()
           });
         });
+        console.log("Loaded posts:", posts.length);
       } catch (error) {
         console.error("Error loading posts:", error);
       }
@@ -98,34 +102,49 @@
 
     // Set up real-time listener
     function setupRealtimeListener() {
-      const q = query(collection(db, "posts"), orderBy("date", "desc"));
-      unsubscribe = onSnapshot(q, (querySnapshot) => {
-        posts = [];
-        querySnapshot.forEach((doc) => {
-          posts.push({
-            id: doc.id,
-            ...doc.data()
+      try {
+        console.log("Setting up real-time listener...");
+        const q = query(collection(db, "posts"), orderBy("date", "desc"));
+        unsubscribe = onSnapshot(q, (querySnapshot) => {
+          posts = [];
+          querySnapshot.forEach((doc) => {
+            posts.push({
+              id: doc.id,
+              ...doc.data()
+            });
           });
+          console.log("Real-time update:", posts.length, "posts");
+          renderPosts(document.getElementById('date-picker').value || null);
+        }, (error) => {
+          console.error("Real-time listener error:", error);
         });
-        renderPosts(document.getElementById('date-picker').value || null);
-      });
+      } catch (error) {
+        console.error("Error setting up real-time listener:", error);
+      }
     }
 
     // Save post to Firestore
     async function savePost(postData) {
       try {
-        await addDoc(collection(db, "posts"), postData);
+        console.log("Saving post:", postData);
+        const docRef = await addDoc(collection(db, "posts"), postData);
+        console.log("Post saved with ID:", docRef.id);
+        return docRef;
       } catch (error) {
         console.error("Error saving post:", error);
+        throw error;
       }
     }
 
     // Delete post from Firestore
     async function deletePostFromFirestore(postId) {
       try {
+        console.log("Deleting post:", postId);
         await deleteDoc(doc(db, "posts", postId));
+        console.log("Post deleted successfully");
       } catch (error) {
         console.error("Error deleting post:", error);
+        throw error;
       }
     }
 
@@ -207,8 +226,12 @@
 
     // Delete a post
     async function deletePost(postId) {
-      await deletePostFromFirestore(postId);
-      // Real-time listener will automatically update the UI
+      try {
+        await deletePostFromFirestore(postId);
+        // Real-time listener will automatically update the UI
+      } catch (error) {
+        console.error("Error in deletePost:", error);
+      }
     }
 
     // Add new blog post
@@ -224,13 +247,21 @@
         date = now.toISOString().slice(0, 10);
       }
 
-      // Save to Firestore
-      await savePost({ content, author: name, date });
-      
-      // Clear form
-      document.getElementById('post-content').value = '';
-      
-      // Real-time listener will automatically update the UI
+      console.log("Submitting post:", { content, author: name, date });
+
+      try {
+        // Save to Firestore
+        await savePost({ content, author: name, date });
+        
+        // Clear form
+        document.getElementById('post-content').value = '';
+        
+        console.log("Post submitted successfully");
+        // Real-time listener will automatically update the UI
+      } catch (error) {
+        console.error("Error submitting post:", error);
+        alert("글 저장 중 오류가 발생했습니다. 다시 시도해주세요.");
+      }
     });
 
     // Date picker filter
@@ -246,11 +277,14 @@
       renderPosts();
     });
 
-    // Initialize flatpickr in English
-    flatpickr("#date-picker", { locale: "en" });
+    // Initialize flatpickr in Korean
+    flatpickr("#date-picker", { 
+      locale: "ko",
+      dateFormat: "Y-m-d"
+    });
 
     // Initialize app when DOM is loaded
-    window.addEventListener('DOMContentLoaded', initializeApp);
+    window.addEventListener('DOMContentLoaded', initializeBlogApp);
 
     // Cleanup listener when page unloads
     window.addEventListener('beforeunload', function() {
@@ -262,5 +296,7 @@
   
   <!-- flatpickr JS -->
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <!-- Korean locale for flatpickr -->
+  <script src="https://npmcdn.com/flatpickr/dist/l10n/ko.js"></script>
 </body>
 </html> 

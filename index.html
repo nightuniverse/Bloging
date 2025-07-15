@@ -39,96 +39,20 @@
     </div>
   </footer>
   
-  <!-- Firebase SDK -->
-  <script type="module">
-    // Import the functions you need from the SDKs you need
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, onSnapshot, orderBy, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-    // Your web app's Firebase configuration
-    // TODO: Replace with your own Firebase config
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    let posts = [];
-    let unsubscribe = null;
-
-    // Initialize Firebase and load posts
-    async function initializeApp() {
-      try {
-        // Load posts from Firestore
-        await loadPosts();
-        
-        // Set up real-time listener
-        setupRealtimeListener();
-        
-        // Render posts
-        renderPosts();
-      } catch (error) {
-        console.error("Error initializing app:", error);
-      }
+  <!-- flatpickr JS -->
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script>
+    // Helper: Get posts from localStorage
+    function getStoredPosts() {
+      const posts = localStorage.getItem('blogPosts');
+      return posts ? JSON.parse(posts) : [];
     }
-
-    // Load posts from Firestore
-    async function loadPosts() {
-      try {
-        const q = query(collection(db, "posts"), orderBy("date", "desc"));
-        const querySnapshot = await getDocs(q);
-        posts = [];
-        querySnapshot.forEach((doc) => {
-          posts.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-      } catch (error) {
-        console.error("Error loading posts:", error);
-      }
+    
+    // Helper: Save posts to localStorage
+    function savePosts(posts) {
+      localStorage.setItem('blogPosts', JSON.stringify(posts));
     }
-
-    // Set up real-time listener
-    function setupRealtimeListener() {
-      const q = query(collection(db, "posts"), orderBy("date", "desc"));
-      unsubscribe = onSnapshot(q, (querySnapshot) => {
-        posts = [];
-        querySnapshot.forEach((doc) => {
-          posts.push({
-            id: doc.id,
-            ...doc.data()
-          });
-        });
-        renderPosts(document.getElementById('date-picker').value || null);
-      });
-    }
-
-    // Save post to Firestore
-    async function savePost(postData) {
-      try {
-        await addDoc(collection(db, "posts"), postData);
-      } catch (error) {
-        console.error("Error saving post:", error);
-      }
-    }
-
-    // Delete post from Firestore
-    async function deletePostFromFirestore(postId) {
-      try {
-        await deleteDoc(doc(db, "posts", postId));
-      } catch (error) {
-        console.error("Error deleting post:", error);
-      }
-    }
-
+    
     // Group posts by date (YYYY-MM-DD)
     function groupPostsByDate(posts) {
       const grouped = {};
@@ -138,11 +62,12 @@
       });
       return grouped;
     }
-
+    
     // Render all posts, grouped by day
     function renderPosts(filterDate = null) {
       const postSection = document.getElementById('posts-section');
       postSection.innerHTML = '';
+      const posts = getStoredPosts();
       const grouped = groupPostsByDate(posts);
       
       // Get sorted dates (descending)
@@ -165,7 +90,8 @@
           noteDiv.className = 'note';
           noteDiv.style = 'margin-bottom: 0.5rem; width: 100%; display: flex; flex-direction: column; align-items: center; background: #f9f9f9; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.03); padding: 0.75rem; cursor: grab;';
           noteDiv.setAttribute('draggable', 'true');
-          noteDiv.setAttribute('data-post-id', post.id);
+          noteDiv.setAttribute('data-date', date);
+          noteDiv.setAttribute('data-idx', idx);
           noteDiv.innerHTML = `
             <p class="post-content" style="margin: 0 auto; text-align: center;">${post.content}</p>
           `;
@@ -179,7 +105,7 @@
       const trashCan = document.getElementById('trash-can');
       document.querySelectorAll('.note').forEach(note => {
         note.addEventListener('dragstart', function(e) {
-          e.dataTransfer.setData('text/plain', note.getAttribute('data-post-id'));
+          e.dataTransfer.setData('text/plain', JSON.stringify({ date: note.getAttribute('data-date'), idx: note.getAttribute('data-idx') }));
           trashCan.style.background = '#ffeaea';
         });
         
@@ -200,19 +126,28 @@
       trashCan.ondrop = function(e) {
         e.preventDefault();
         trashCan.style.background = '#fff';
-        const postId = e.dataTransfer.getData('text/plain');
-        deletePost(postId);
+        const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+        deletePost(data.date, parseInt(data.idx));
       };
     }
-
-    // Delete a post
-    async function deletePost(postId) {
-      await deletePostFromFirestore(postId);
-      // Real-time listener will automatically update the UI
+    
+    // Delete a post by date and index
+    function deletePost(date, idx) {
+      const posts = getStoredPosts();
+      const grouped = groupPostsByDate(posts);
+      if (grouped[date]) {
+        grouped[date].splice(idx, 1);
+        if (grouped[date].length === 0) delete grouped[date];
+      }
+      // Flatten grouped back to array
+      const newPosts = [];
+      Object.keys(grouped).forEach(d => grouped[d].forEach(p => newPosts.push(p)));
+      savePosts(newPosts);
+      renderPosts(document.getElementById('date-picker').value || null);
     }
-
+    
     // Add new blog post
-    document.getElementById('post-form').addEventListener('submit', async function(e) {
+    document.getElementById('post-form').addEventListener('submit', function(e) {
       e.preventDefault();
       const content = document.getElementById('post-content').value;
       const name = 'Seonhoo Kim';
@@ -224,43 +159,32 @@
         date = now.toISOString().slice(0, 10);
       }
 
-      // Save to Firestore
-      await savePost({ content, author: name, date });
-      
-      // Clear form
+      // Save to localStorage
+      const posts = getStoredPosts();
+      posts.push({ content, author: name, date });
+      savePosts(posts);
+      renderPosts(date);
       document.getElementById('post-content').value = '';
-      
-      // Real-time listener will automatically update the UI
     });
-
+    
     // Date picker filter
     document.getElementById('date-picker').addEventListener('change', function() {
       const date = this.value;
       renderPosts(date || null);
     });
-
+    
     // Records link shows all
     document.getElementById('records-link').addEventListener('click', function(e) {
       e.preventDefault();
       document.getElementById('date-picker').value = '';
       renderPosts();
     });
-
+    
+    // On page load, render posts
+    window.addEventListener('DOMContentLoaded', renderPosts);
+    
     // Initialize flatpickr in English
     flatpickr("#date-picker", { locale: "en" });
-
-    // Initialize app when DOM is loaded
-    window.addEventListener('DOMContentLoaded', initializeApp);
-
-    // Cleanup listener when page unloads
-    window.addEventListener('beforeunload', function() {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    });
   </script>
-  
-  <!-- flatpickr JS -->
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </body>
 </html> 

@@ -103,4 +103,48 @@ footer {
   .sidebar {
     margin-top: 2rem;
   }
+}
+@media (max-width: 500px) {
+  .container,
+  main.container,
+  .posts,
+  .sidebar,
+  section.blog-inputs {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 0.5rem !important;
+    box-sizing: border-box;
+  }
+  header {
+    padding: 1rem 0.5rem;
+  }
+  .blog-title {
+    font-size: 1.3rem;
+  }
+  nav ul {
+    gap: 0.7rem;
+  }
+  input[type="date"],
+  textarea#post-content {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 1rem;
+  }
+  textarea#post-content {
+    height: 120px;
+  }
+  .post-day {
+    padding: 1rem 0.5rem !important;
+  }
+  #trash-can {
+    right: 12px !important;
+    bottom: 12px !important;
+    width: 44px !important;
+    height: 44px !important;
+  }
+  footer {
+    font-size: 0.9rem;
+    padding: 0.7rem 0;
+  }
 } 

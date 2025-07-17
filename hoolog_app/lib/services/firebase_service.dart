@@ -30,12 +30,23 @@ class FirebaseService {
       final querySnapshot = await _firestore
           .collection(_collectionName)
           .orderBy('date', descending: true)
-          .orderBy('createdAt', descending: true)
           .get();
       
-      return querySnapshot.docs
+      final posts = querySnapshot.docs
           .map((doc) => Post.fromMap(doc.data(), doc.id))
           .toList();
+      
+      // 클라이언트 사이드에서 정렬
+      posts.sort((a, b) {
+        // 먼저 날짜로 정렬
+        final dateComparison = b.date.compareTo(a.date);
+        if (dateComparison != 0) return dateComparison;
+        
+        // 같은 날짜면 createdAt으로 정렬 (최신순)
+        return b.createdAt.compareTo(a.createdAt);
+      });
+      
+      return posts;
     } catch (e) {
       throw Exception('포스트 로딩 중 오류가 발생했습니다: $e');
     }
@@ -63,10 +74,23 @@ class FirebaseService {
     return _firestore
         .collection(_collectionName)
         .orderBy('date', descending: true)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Post.fromMap(doc.data(), doc.id))
-            .toList());
+        .map((snapshot) {
+          final posts = snapshot.docs
+              .map((doc) => Post.fromMap(doc.data(), doc.id))
+              .toList();
+          
+          // 클라이언트 사이드에서 정렬
+          posts.sort((a, b) {
+            // 먼저 날짜로 정렬
+            final dateComparison = b.date.compareTo(a.date);
+            if (dateComparison != 0) return dateComparison;
+            
+            // 같은 날짜면 createdAt으로 정렬 (최신순)
+            return b.createdAt.compareTo(a.createdAt);
+          });
+          
+          return posts;
+        });
   }
 } 

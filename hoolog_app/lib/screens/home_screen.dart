@@ -215,6 +215,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildGroupedPosts(List<Post> posts) {
+    // 디버깅: 전체 포스트 정렬 상태 확인
+    print('=== 전체 포스트 정렬 상태 ===');
+    for (int i = 0; i < posts.length; i++) {
+      print('${i + 1}. ${posts[i].date} - ${posts[i].createdAt} - ${posts[i].content.substring(0, posts[i].content.length > 20 ? 20 : posts[i].content.length)}...');
+    }
+    
     // 날짜별로 그룹화
     final groupedPosts = <String, List<Post>>{};
     for (final post in posts) {
@@ -226,7 +232,17 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // 각 날짜 그룹 내에서 createdAt으로 정렬 (최신순)
     for (final date in groupedPosts.keys) {
+      print('=== $date 날짜 그룹 정렬 전 ===');
+      for (int i = 0; i < groupedPosts[date]!.length; i++) {
+        print('${i + 1}. ${groupedPosts[date]![i].createdAt} - ${groupedPosts[date]![i].content.substring(0, groupedPosts[date]![i].content.length > 20 ? 20 : groupedPosts[date]![i].content.length)}...');
+      }
+      
       groupedPosts[date]!.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      
+      print('=== $date 날짜 그룹 정렬 후 ===');
+      for (int i = 0; i < groupedPosts[date]!.length; i++) {
+        print('${i + 1}. ${groupedPosts[date]![i].createdAt} - ${groupedPosts[date]![i].content.substring(0, groupedPosts[date]![i].content.length > 20 ? 20 : groupedPosts[date]![i].content.length)}...');
+      }
     }
 
     // 날짜별로 정렬 (최신순)

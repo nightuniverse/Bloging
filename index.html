@@ -155,6 +155,19 @@
         if (!grouped[post.date]) grouped[post.date] = [];
         grouped[post.date].push(post);
       });
+      
+      // 각 날짜 그룹 내에서 createdAt으로 정렬 (최신순)
+      Object.keys(grouped).forEach(date => {
+        grouped[date].sort((a, b) => {
+          // createdAt이 있으면 그것으로 정렬, 없으면 기본 정렬
+          if (a.createdAt && b.createdAt) {
+            return new Date(b.createdAt.toDate ? b.createdAt.toDate() : b.createdAt) - 
+                   new Date(a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt);
+          }
+          return 0;
+        });
+      });
+      
       return grouped;
     }
 
@@ -250,8 +263,13 @@
       console.log("Submitting post:", { content, author: name, date });
 
       try {
-        // Save to Firestore
-        await savePost({ content, author: name, date });
+        // Save to Firestore with createdAt timestamp
+        await savePost({ 
+          content, 
+          author: name, 
+          date,
+          createdAt: new Date() // 현재 시간 추가
+        });
         
         // Clear form
         document.getElementById('post-content').value = '';

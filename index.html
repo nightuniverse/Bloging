@@ -156,13 +156,13 @@
         grouped[post.date].push(post);
       });
       
-      // 각 날짜 그룹 내에서 createdAt으로 정렬 (최신순)
+      // 각 날짜 그룹 내에서 createdAt으로 정렬 (최신순 - 위쪽에 표시)
       Object.keys(grouped).forEach(date => {
         grouped[date].sort((a, b) => {
           // createdAt이 있으면 그것으로 정렬, 없으면 기본 정렬
           if (a.createdAt && b.createdAt) {
-            return new Date(b.createdAt.toDate ? b.createdAt.toDate() : b.createdAt) - 
-                   new Date(a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt);
+            return new Date(a.createdAt.toDate ? a.createdAt.toDate() : a.createdAt) - 
+                   new Date(b.createdAt.toDate ? b.createdAt.toDate() : b.createdAt);
           }
           return 0;
         });
